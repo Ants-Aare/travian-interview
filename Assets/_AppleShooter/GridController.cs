@@ -1,9 +1,7 @@
 using System.Collections;
-using AAA.Extensions;
-using Unity.Android.Types;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.Serialization;
 using static _AppleShooter.MagicNumbers;
 
 namespace _AppleShooter
@@ -25,7 +23,7 @@ namespace _AppleShooter
         private int[,] _grid;
         private int _snakeLength;
         private Vector2Int _currentMoveDirection = Vector2Int.up;
-        private bool _requestedShoot = false;
+        [SerializeField] private bool _requestedShoot = false;
 
         private float _snakeMoveTimer;
 
@@ -38,7 +36,7 @@ namespace _AppleShooter
             _grid = new int[gridSize.x, gridSize.y];
             CreateSnake(gridSize / 2, snakeStartLength);
             SpawnAppleAtRandomPosition();
-            // _enemyCoroutine = StartCoroutine(StartEnemySpawning());
+            _enemyCoroutine = StartCoroutine(StartEnemySpawning());
         }
 
         private void SpawnAppleAtRandomPosition()
@@ -64,7 +62,7 @@ namespace _AppleShooter
 
             _snakeMoveTimer += Time.fixedDeltaTime;
             _shootAppleTimer += Time.fixedDeltaTime;
-
+            
             if (_shootAppleTimer >= shootAppleSpeed)
             {
                 _shootAppleTimer = 0;
@@ -74,7 +72,7 @@ namespace _AppleShooter
             if (_snakeMoveTimer >= snakeSpeed)
             {
                 _snakeMoveTimer = 0;
-
+            
                 UpdateSnakeTileHealth();
                 if (!TryMoveSnake(_currentMoveDirection))
                     EndGame();
@@ -82,6 +80,7 @@ namespace _AppleShooter
 
             if (_requestedShoot)
             {
+                _requestedShoot = false;
                 CreateShootApple(_currentMoveDirection);
             }
 
@@ -90,6 +89,11 @@ namespace _AppleShooter
 
         private void UpdateShootApples()
         {
+            // there is a problem with updating the memory in place
+            // all apples that move upwards or right will get iterated over multiple times
+
+            var changed = new List<(Vector2Int position, int index)>();
+            
             var width = _grid.GetLength(0);
             var height = _grid.GetLength(1);
 
@@ -97,8 +101,8 @@ namespace _AppleShooter
             {
                 for (var y = 0; y < height; y++)
                 {
-                    // if it's a shootapple index including offsets
                     var index = _grid[x, y];
+                    // if it's a shootapple index including offsets
                     if (index <= SHOOTAPPLE + 3 && index >= SHOOTAPPLE)
                     {
                         _grid[x, y] = TILE;
@@ -107,10 +111,6 @@ namespace _AppleShooter
 
                         var targetPosition = position + moveDirection;
 
-                        if (_grid[targetPosition.x, targetPosition.y] == ENEMY)
-                        {
-                            return;
-                        }
 
                         if (targetPosition.x < 0
                             || targetPosition.y < 0
@@ -120,9 +120,25 @@ namespace _AppleShooter
                             return;
                         }
 
-                        _grid[targetPosition.x, targetPosition.y] = index;
+                        if (_grid[targetPosition.x, targetPosition.y] == ENEMY)
+                        {
+                            _grid[targetPosition.x, targetPosition.y] = TILE;
+                            return;
+                        }
+                        
+                        
+                        changed.Add((targetPosition, index));
+                        // _grid[targetPosition.x, targetPosition.y] = index;
                     }
                 }
+            }
+
+                        //TODO: This is where I stopped the interview
+                        // TODO: Apply the changes to the grid. Ideally there would be another way to do this without using a list & allocating garbage
+            foreach (var changedApples in changed)
+            {
+                // _grid[changedApples.position.x, targetPosition.y] = index;
+
             }
         }
 

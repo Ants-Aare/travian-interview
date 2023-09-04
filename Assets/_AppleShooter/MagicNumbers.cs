@@ -16,7 +16,7 @@ namespace _AppleShooter
 
         public static int ToShootAppleIndex(CardinalDirection direction)
         {
-            return (int)direction - SHOOTAPPLE;
+            return (int)direction + SHOOTAPPLE;
         }
 
     }
